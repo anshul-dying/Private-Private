@@ -212,7 +212,6 @@ artifacts/
 catboost_info/
 temp/
 Docs/
-tests/
 
 
 *.json
