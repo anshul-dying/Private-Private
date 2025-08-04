@@ -1,0 +1,19 @@
+fastapi
+uvicorn
+pydantic
+pinecone
+sentence-transformers
+PyPDF2
+python-docx
+psycopg2-binary
+requests
+python-dotenv
+pytest
+httpx
+loguru
+pydantic-settings
+faiss-cpu
+pytest-asyncio
+nltk
+
+-e .
