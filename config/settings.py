@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # OpenRouter API Configuration
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_REFERER = os.getenv("OPENROUTER_REFERER", "https://github.com/your-repo")
 
 # Local LLM Configuration
