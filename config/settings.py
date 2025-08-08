@@ -18,6 +18,13 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///database.db")
 # Logging Configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+# File Processing Configuration
+TEMP_DIR = os.getenv("TEMP_DIR", "temp")
+TEMP_FILE_CLEANUP_RETRIES = int(os.getenv("TEMP_FILE_CLEANUP_RETRIES", "3"))
+TEMP_FILE_CLEANUP_DELAY = float(os.getenv("TEMP_FILE_CLEANUP_DELAY", "1.0"))
+DOWNLOAD_TIMEOUT = int(os.getenv("DOWNLOAD_TIMEOUT", "30"))
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "100"))  # 100MB default limit
+
 if not OPENROUTER_API_KEY:
     raise ValueError("OPENROUTER_API_KEY not found in .env file")
 if not OPENROUTER_REFERER:

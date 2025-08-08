@@ -21,7 +21,7 @@ class PredefinedAnswers:
                     if line and '|' in line:
                         parts = line.split('|')
                         if len(parts) >= 3:
-                            doc_name = parts[0].strip()
+                            _ = parts[0].strip()
                             query = parts[1].strip()
                             answer = parts[2].strip()
                             

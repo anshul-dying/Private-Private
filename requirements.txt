@@ -15,5 +15,12 @@ pydantic-settings
 faiss-cpu
 pytest-asyncio
 nltk
+# New dependencies for multi-format file processing
+pandas
+openpyxl
+python-pptx
+Pillow
+pytesseract
+python-magic
 
 -e .

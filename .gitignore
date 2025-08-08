@@ -222,3 +222,5 @@ faiss_index.bin
 setup.py
 test_predefined_answers.py
 view_logs.py
+check.py
+duplicate_query.py

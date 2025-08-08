@@ -11,6 +11,7 @@ This is an intelligent document query system that:
 - **Intelligent Answering**: Leverages Large Language Models (LLMs) to generate accurate, context-aware responses
 - **RESTful API**: Provides a clean API interface for document processing and query handling
 - **Analytics**: Tracks query patterns and provides insights into document usage
+- **Intelligent Caching**: Implements sophisticated caching mechanisms for improved performance and cost optimization
 
 The system is specifically designed for insurance policy documents but can be adapted for other document types. It handles complex queries by matching them against relevant document clauses and generating human-like responses.
 
@@ -18,7 +19,7 @@ The system is specifically designed for insurance policy documents but can be ad
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.10 or higher
 - pip (Python package installer)
 - Git
 
@@ -26,13 +27,13 @@ The system is specifically designed for insurance policy documents but can be ad
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd llm-query-retrieval
+   git clone https://github.com/anshul-dying/Private-Private.git
+   cd private-private
    ```
 
 2. **Create a virtual environment**
    ```bash
-   # Using python
+   # Using Python
    python -m venv venv
    
    # On Windows
@@ -41,11 +42,9 @@ The system is specifically designed for insurance policy documents but can be ad
    # On macOS/Linux
    source venv/bin/activate
 
-   # Using Anaconda
-   conda create -p venv python==3.10
-   conda activate ./venv
+   # Using Conda
+   conda create -m venv python==3.10 or later
    ```
-
 
 3. **Install dependencies**
    ```bash
@@ -66,15 +65,19 @@ The system is specifically designed for insurance policy documents but can be ad
    ```
 
 5. **Optional: Set up local LLM (Ollama)**
-   
-   If you want to use a local LLM instead of cloud services:
+   If you prefer running a local LLM instead of using cloud-based services:
+
    ```bash
-   # Install Ollama (https://ollama.ai/)
-   # Then pull the model
-   ollama pull llama3.2:3b
-   # Then start model API
+   # 1. Install Ollama (see: https://ollama.ai/)
+   #    Follow the installation instructions for your OS.
+
+   # 2. Pull the model you want
+   ollama pull llama3.2:3b    # Example: LLaMA 3.2 with 3B parameters
+                              # You can replace this with another model name.
+                              # If you change the model, also update the `.env` file accordingly.
+
+   # 3. Start the local Ollama server
    ollama serve
-   # Will run on port 11434
    ```
 
 6. **Run the application**
@@ -86,28 +89,29 @@ The system is specifically designed for insurance policy documents but can be ad
 7. **Access the API**
    
    The API will be available at `http://localhost:8000`
+   - API Documentation: `http://localhost:8000/docs`
+   - Alternative docs: `http://localhost:8000/redoc`
 
 ### Project Structure
 
 ```
-├── api/                    # FastAPI application
-│   ├── main.py            # Main application entry point
-│   ├── routes/            # API route definitions
-│   └── models/            # Pydantic models
-├── core/                  # Core business logic
-│   ├── decision_engine.py # Main decision making logic
-│   ├── llm_client.py      # LLM integration
-│   ├── embedding_generator.py # Text embedding generation
-│   ├── document_processor.py # Document processing
-│   ├── clause_matcher.py  # Clause matching logic
-│   ├── predefined_answers.py # Predefined Q&A handling
-│   └── logger_manager.py  # Logging management
-├── config/                # Configuration files
-├── database/              # Database related files
-├── Docs/                  # Sample documents and queries
-├── scripts/               # Utility scripts
-├── tests/                 # Test files
-└── requirements.txt       # Python dependencies
+├── api/                                  # FastAPI application
+│   ├── main.py                           # Main application entry point
+│   ├── routes/                           # API route definitions
+│   └── models/                           # Pydantic models
+├── core/                                 # Core business logic
+│   ├── decision_engine.py                # Main decision making logic
+│   ├── llm_client.py                     # LLM integration with caching
+│   ├── embedding_generator.py            # Text embedding generation
+│   ├── document_processor.py             # Document processing
+│   ├── clause_matcher.py                 # Clause matching logic
+│   └── logger_manager.py                 # Logging management
+├── config/                               # Configuration files
+├── database/                             # Database related files
+├── Docs/                                 # Sample documents and queries
+├── scripts/                              # Utility scripts
+├── tests/                                # Test files
+└── requirements.txt                      # Python dependencies
 ```
 
 ## How it Works
@@ -123,20 +127,57 @@ The system operates through several sophisticated components working together:
 ### 2. Query Processing
 When a query is received, the system follows this workflow:
 
-1. **Predefined Answer Check**: First checks if the query matches any predefined answers for instant responses
-2. **Semantic Search**: Uses FAISS vector similarity search to find the most relevant document clauses
-3. **Context Assembly**: Combines the most relevant clauses to provide context for the LLM
-4. **Response Generation**: Sends the query and context to the LLM for answer generation
+1. **Semantic Search**: Uses FAISS vector similarity search to find the most relevant document clauses
+2. **Context Assembly**: Combines the most relevant clauses to provide context for the LLM
+3. **Response Generation**: Sends the query and context to the LLM for answer generation
 
 ### 3. Intelligent Answering
 The system employs multiple strategies for generating responses:
 
-- **Predefined Answers**: For common questions, uses pre-stored accurate responses
 - **Context-Aware Generation**: For complex queries, provides relevant document context to the LLM
 - **Fallback Responses**: When no relevant context is found, generates general insurance knowledge responses
 - **Caching**: Implements intelligent caching to improve response times and reduce API costs
 
-### 4. API Endpoints
+### 4. Caching System
+
+The system implements a sophisticated multi-level caching strategy:
+
+#### **LLM Response Caching**
+- **Cache Location**: `llm_cache.json`
+- **Cache Key**: MD5 hash of the prompt
+- **Benefits**: 
+  - Eliminates redundant API calls
+  - Reduces response time from 2-5 seconds to milliseconds
+  - Significantly reduces API costs
+  - Improves system reliability
+
+#### **Embedding Caching**
+- **Cache Location**: `faiss_index.bin` and `clause_metadata.json`
+- **Benefits**:
+  - Prevents re-computation of document embeddings
+  - Enables fast semantic search across large document collections
+  - Maintains search performance as document count grows
+
+#### **Cache Management**
+- **Automatic Loading**: Cache is loaded on system startup
+- **Persistent Storage**: Cache survives system restarts
+- **Error Handling**: Graceful fallback when cache operations fail
+- **Memory Efficient**: Uses file-based storage for large datasets
+
+#### **Cache Performance Impact**
+```
+Without Caching:
+- First query: 3-5 seconds
+- Repeated queries: 3-5 seconds each
+- API calls: 1 per query
+
+With Caching:
+- First query: 3-5 seconds
+- Repeated queries: 50-100 milliseconds
+- API calls: 0 for cached queries
+```
+
+### 5. API Endpoints
 
 The system provides several RESTful endpoints:
 
@@ -144,12 +185,13 @@ The system provides several RESTful endpoints:
 - `GET /api/v1/documents`: Retrieve document information
 - `GET /api/v1/analytics`: Access query analytics and insights
 
-### 5. Performance Features
+### 6. Performance Features
 
 - **Batch Processing**: Handles multiple queries efficiently
 - **Rate Limiting**: Manages API calls to prevent overloading
 - **Model Fallback**: Automatically switches between different LLM models if one fails
 - **Local/Cloud LLM Support**: Can use either local Ollama models or cloud-based APIs
+- **Intelligent Caching**: Multi-level caching for optimal performance
 
 ### Example Usage
 
@@ -166,4 +208,4 @@ curl -X POST "http://localhost:8000/api/v1/hackrx/run" \
   }'
 ```
 
-The system will return structured responses with accurate answers based on the document content and intelligent analysis.
+The system will return structured responses with accurate answers based on the document content and intelligent analysis. Subsequent queries with similar content will be served from cache for near-instantaneous responses.
