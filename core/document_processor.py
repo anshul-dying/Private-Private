@@ -13,6 +13,7 @@ import mimetypes
 import uuid
 import time
 from urllib.parse import urlparse, parse_qs
+from bs4 import BeautifulSoup
 from config.settings import TEMP_DIR, TEMP_FILE_CLEANUP_RETRIES, TEMP_FILE_CLEANUP_DELAY, DOWNLOAD_TIMEOUT, MAX_FILE_SIZE_MB
 
 class DocumentProcessor:
@@ -31,12 +32,45 @@ class DocumentProcessor:
                 # Try to fetch the actual token from the URL first
                 response = requests.get(doc_url, timeout=10)
                 if response.status_code == 200:
-                    fetched_token = response.text.strip()
-                    if fetched_token and len(fetched_token) == 64:  # SHA256 hash length
-                        logger.info(f"Successfully fetched token from URL: {fetched_token[:10]}...")
-                        return fetched_token
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    
+                    # Try multiple ways to find the token
+                    token = None
+                    
+                    # Method 1: Look for element with id='token'
+                    token_element = soup.find(id='token')
+                    if token_element:
+                        token = token_element.text.strip()
+                        logger.info(f"Found token via id='token': {token[:10]}...")
+                    
+                    # Method 2: Look for element with class containing 'token'
+                    if not token:
+                        token_element = soup.find(class_=lambda x: x and 'token' in x.lower())
+                        if token_element:
+                            token = token_element.text.strip()
+                            logger.info(f"Found token via class: {token[:10]}...")
+                    
+                    # Method 3: Look for text that looks like a hash (64 characters)
+                    if not token:
+                        text_content = soup.get_text()
+                        import re
+                        hash_pattern = r'\b[a-f0-9]{64}\b'
+                        matches = re.findall(hash_pattern, text_content, re.IGNORECASE)
+                        if matches:
+                            token = matches[0]
+                            logger.info(f"Found token via regex: {token[:10]}...")
+                    
+                    # Method 4: If still no token, return the entire text content (cleaned)
+                    if not token:
+                        text_content = soup.get_text().strip()
+                        if text_content and len(text_content) < 200:  # Reasonable length
+                            token = text_content
+                            logger.info(f"Using entire page content as token: {token[:10]}...")
+                    
+                    if token:
+                        return token
                     else:
-                        logger.warning(f"Invalid token format from URL, using default")
+                        logger.warning("No token found in HTML content")
                 else:
                     logger.warning(f"Failed to fetch token from URL (status: {response.status_code})")
             except Exception as e:
@@ -44,9 +78,11 @@ class DocumentProcessor:
             
             # Fallback to default token for team 8687
             if "hackTeam=8687" in doc_url:
+                logger.info("Using fallback token for team 8687")
                 return "c1f4038f5a7f858cb06036396ed99cccac0929493e1ebeafe76aee4f9fd1bbf1"
             else:
                 # For other team IDs, return a generic response
+                logger.info("Using generic response for unknown team")
                 return "Secret token URL detected. Please check the specific team token."
         
         # Extract file name from URL, ignoring query parameters
